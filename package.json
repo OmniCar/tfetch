@@ -12,7 +12,7 @@
     "tslib": "^1.9.0"
   },
   "devDependencies": {
-    "typescript": "^2.9.2"
+    "typescript": "^3.0.3"
   },
   "scripts": {
     "tsc": "node node_modules/typescript/bin/tsc -p ./tsconfig.json -w",
