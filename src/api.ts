@@ -3,10 +3,10 @@ import { ApiError } from '@omnicar/sam-types'
 export interface IJsonStatus<T, E> {
   data?: T
   errorData?: E
-  networkError: boolean
+  networkError?: networkError
   statusCode?: number
 }
-
+export type networkError = 'timeout' | 'other'
 export type httpType = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
 export interface IExtraHeader {
@@ -43,8 +43,8 @@ const defaultRequestParams = {
 /**
  * Sends a standard request, and handles JSON parsing and response mapping to IJSonStatus
  * If the IJsonStatus data is defined, it means the request was successful.
- * If the networkError is true it means a network error happened.
- * If data is undefined, and networkError is false, errorData will be defined
+ * If the networkError is set it means a network error happened.
+ * If data is undefined, and networkError is unset, errorData will be defined
  * T is the expected type to be returned on success, E the expected type on errors
  * @param url Full path for request - example: https://github.com/api/test
  * @param method Http method to use (one of httpType)
@@ -70,7 +70,7 @@ export function requestJson<T, E, B = Object>(
     validStatusCodeEnd,
     timeout,
   } = processedParams
-  const statusResponse: IJsonStatus<T, E> = { networkError: false }
+  const statusResponse: IJsonStatus<T, E> = {}
   const headers = new Headers()
   if (jsonRequest) {
     // Add default JSON headers
@@ -99,7 +99,7 @@ export function requestJson<T, E, B = Object>(
     // this promise will never resolve!
     new Promise((_, reject) =>
       setTimeout(() => {
-        const err: ApiError = { message: 'GENERIC_NETWORK_TIMEOUT' }
+        const err: networkError = 'timeout'
         reject(err)
       }, timeout),
     ),
@@ -132,12 +132,22 @@ export function requestJson<T, E, B = Object>(
       return statusResponse
     })
     .catch((err: E) => {
-      // For now we assume all errors are network errors. They could potentially be JSON parsing errors as well
-      statusResponse.networkError = true
-      statusResponse.errorData = err
+      if (isNetworkError(err)) {
+        statusResponse.networkError = err
+      } else {
+        statusResponse.errorData = err
+      }
 
       return statusResponse
     })
+}
+
+/**
+ * Check if error is of type networkError
+ * @param err Error
+ */
+const isNetworkError = (err: any): err is networkError => {
+  return err === 'timeout' || err === 'other'
 }
 
 const isValidStatusCode = (
