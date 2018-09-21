@@ -1,5 +1,3 @@
-import { ApiError } from '@omnicar/sam-types'
-
 export interface IJsonStatus<T, E> {
   data?: T
   errorData?: E
@@ -142,10 +140,6 @@ export function requestJson<T, E, B = Object>(
     })
 }
 
-/**
- * Check if error is of type networkError
- * @param err Error
- */
 const isNetworkError = (err: any): err is networkError => {
   return err === 'timeout' || err === 'other'
 }
