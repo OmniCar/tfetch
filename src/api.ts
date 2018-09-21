@@ -1,11 +1,13 @@
 export interface IJsonStatus<T, E> {
   data?: T
   errorData?: E
-  networkError?: networkError
+  networkError?: NetworkError
   statusCode?: number
 }
-export type networkError = 'timeout' | 'other'
-export type httpType = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+
+export type NetworkError = 'TIMEOUT' | 'OTHER'
+
+export type HttpType = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
 export interface IExtraHeader {
   key: string
@@ -15,7 +17,7 @@ export interface IExtraHeader {
 export interface IRequestBasicParams<B = any> {
   body?: B
   extraHeaders?: IExtraHeader[]
-  method?: httpType
+  method?: HttpType
   jsonRequest?: boolean
   jsonResponse?: boolean
   url: string
@@ -44,12 +46,13 @@ const defaultRequestParams = {
  * If the networkError is set it means a network error happened.
  * If data is undefined, and networkError is unset, errorData will be defined
  * T is the expected type to be returned on success, E the expected type on errors
- * @param url Full path for request - example: https://github.com/api/test
- * @param method Http method to use (one of httpType)
  * @param body Optional body for POST requests
  * @param extraHeaders Optional extra headers to add
- * @param nonJsonRequest Optional boolean whether this is not a boolean request. Defaults to JSON - set this to true to omit json headers
+ * @param method Http method to use (one of httpType)
+ * @param jsonRequest Optional boolean whether this is a boolean request. Defaults to JSON - set this to false to omit json request headers
+ * @param jsonResponse Optional boolean whether this is a boolean response. Defaults to JSON - set this to false to omit json response headers
  * @param validStatusCodes Optional array of HTTP status codes to consider success. Default is 200 - 299
+ * @param url Full path for request - example: https://github.com/api/test
  * @return IJsonStatus object with the parsed data or error
  */
 export function requestJson<T, E, B = Object>(
@@ -94,10 +97,11 @@ export function requestJson<T, E, B = Object>(
 
   return Promise.race([
     fetch(url, params),
-    // this promise will never resolve!
+    // This promise will never resolve
     new Promise((_, reject) =>
       setTimeout(() => {
-        const err: networkError = 'timeout'
+        statusResponse.statusCode = 408 // Timeout status code
+        const err: NetworkError = 'TIMEOUT'
         reject(err)
       }, timeout),
     ),
@@ -129,19 +133,12 @@ export function requestJson<T, E, B = Object>(
       }
       return statusResponse
     })
-    .catch((err: E) => {
-      if (isNetworkError(err)) {
-        statusResponse.networkError = err
-      } else {
-        statusResponse.errorData = err
-      }
-
+    .catch((err: NetworkError | Error) => {
+      // The error is either a timeout ('TIMEOUT'), a network error or a JSON parsing error
+      // For now we're only handling the timeout, and calling all others 'OTHER'
+      statusResponse.networkError = err === 'TIMEOUT' ? 'TIMEOUT' : 'OTHER'
       return statusResponse
     })
-}
-
-const isNetworkError = (err: any): err is networkError => {
-  return err === 'timeout' || err === 'other'
 }
 
 const isValidStatusCode = (
