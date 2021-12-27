@@ -5,7 +5,7 @@ export interface IJsonStatus<T, E> {
   statusCode?: number
 }
 
-export type NetworkError = 'TIMEOUT' | 'OTHER'
+export type NetworkError = 'TIMEOUT' | 'OTHER' | 'TOO_MANY_REQUESTS'
 
 export type HttpType = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
@@ -135,8 +135,23 @@ export function requestJson<T, E, B = Object>(
     })
     .catch((err: NetworkError | Error) => {
       // The error is either a timeout ('TIMEOUT'), a network error or a JSON parsing error
-      // For now we're only handling the timeout, and calling all others 'OTHER'
-      statusResponse.networkError = err === 'TIMEOUT' ? 'TIMEOUT' : 'OTHER'
+      // For now we're only handling the timeout and too many requests, and calling all others 'OTHER'
+      // statusResponse.networkError = err === 'TIMEOUT' ? 'TIMEOUT' : 'OTHER'
+      let error: NetworkError
+      switch(err)
+      {
+        case 'TIMEOUT':
+          error = 'TIMEOUT'
+        break
+        case 'TOO_MANY_REQUESTS':
+          error = 'TOO_MANY_REQUESTS'
+        break
+        default:
+          error = 'OTHER'
+      }
+
+      statusResponse.networkError = error
+      
       return statusResponse
     })
 }
