@@ -134,9 +134,9 @@ export function requestJson<T, E, B = Object>(
       return statusResponse
     })
     .catch((err: NetworkError | Error) => {
-      // The error is either a timeout ('TIMEOUT'), a network error or a JSON parsing error
+      // The error is either a timeout ('TIMEOUT'), a too many reuqest response ('TOO_MANY_REQUESTS'), 
+      // a network error or a JSON parsing error
       // For now we're only handling the timeout and too many requests, and calling all others 'OTHER'
-      // statusResponse.networkError = err === 'TIMEOUT' ? 'TIMEOUT' : 'OTHER'
       let error: NetworkError
       switch(err)
       {
@@ -148,6 +148,7 @@ export function requestJson<T, E, B = Object>(
         break
         default:
           error = 'OTHER'
+        break
       }
 
       statusResponse.networkError = error
